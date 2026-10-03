@@ -398,7 +398,7 @@ if (mp.count(i)) q = mp[i];
 
 ```c++
 struct fff { 
-    LL x, y;
+    int x, y;
     friend bool operator < (const fff &a, const fff &b) {
         if (a.x != b.x) return a.x < b.x;
         return a.y < b.y;
