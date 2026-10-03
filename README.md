@@ -6,9 +6,11 @@ Wangzai 的 XCPC 算法竞赛模板仓库。
 
 - `正文/`：模板正文章节
 - `tools/template_tests/`：模板编译与样例运行测试工具
+- `tools/book_builder/`：整本模板文档打包工具
 - `scripts/`：辅助脚本，例如安装 `pre-push` hook
 - `.githooks/`：仓库内置 Git hook 模板
 - `run-template-tests.ps1`：Windows 下的一键测试入口
+- `build-book.ps1`：自动生成目录并导出整本 PDF 的入口
 
 ## 模板测试
 
@@ -117,6 +119,49 @@ python tools/template_tests/run.py --all
 - `.cpp` / `.exe` 中间文件会在测试开始前清理，并在每个用例结束后自动删除
 - `.generated/` 已加入 `.gitignore`
 - `results.json` 会保留，用于查看最近一次测试汇总结果
+
+## 文档打包
+
+仓库已经提供整本模板文档的自动打包脚本：
+
+```powershell
+.\build-book.ps1
+```
+
+默认会做三件事：
+
+1. 自动按 `正文/` 下的章节顺序汇总整本书
+2. 自动生成整本目录
+3. 生成可打印的 Markdown / HTML / PDF
+
+默认输出目录：
+
+`dist/book`
+
+默认产物：
+
+- `dist/book/Wangzai_XCPC_Templete.md`
+- `dist/book/Wangzai_XCPC_Templete.html`
+- `dist/book/Wangzai_XCPC_Templete.pdf`
+
+如果当前机器暂时只想生成整本 Markdown 和 HTML，不导出 PDF：
+
+```powershell
+.\build-book.ps1 -NoPdf
+```
+
+如果需要指定浏览器路径或调整目录层级深度：
+
+```powershell
+.\build-book.ps1 -Browser "C:\Program Files\Microsoft\Edge\Application\msedge.exe"
+.\build-book.ps1 -TocDepth 3
+```
+
+说明：
+
+- PDF 导出默认使用本机的 Microsoft Edge 或 Google Chrome 无头打印
+- 如果脚本找不到浏览器，可以通过 `-Browser` 显式指定可执行文件路径
+- `dist/` 已加入 `.gitignore`，方便你定期本地打包后再手动上传到 GitHub Releases
 
 ## 说明
 
