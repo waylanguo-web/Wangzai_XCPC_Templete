@@ -1,0 +1,8 @@
+#!/usr/bin/env sh
+set -e
+
+repo_root="$(git rev-parse --show-toplevel)"
+cd "$repo_root"
+
+echo "[template-tests] running changed template tests before push..."
+python "$repo_root/tools/template_tests/run.py" --changed
