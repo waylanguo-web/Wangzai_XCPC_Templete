@@ -68,6 +68,44 @@ python .\tools\template_tests\run.py --list
 
 安装完成后，每次执行 `git push` 前都会自动运行当前改动涉及的模板测试；如果测试失败，push 会被拦下。
 
+## PR / MR 前的 CI
+
+仓库已经接入 GitHub Actions 工作流：
+
+`/.github/workflows/template-tests.yml`
+
+它会在以下时机自动运行：
+
+- 向 `main` 发起 Pull Request 时
+- 代码直接 push 到 `main` 时
+
+CI 中会执行：
+
+```bash
+python tools/template_tests/run.py --all
+```
+
+也就是说，只要当前已经接入测试的章节有问题，PR 就会直接红掉。
+
+如果你希望“PR 未通过测试就绝对不能合并”，还需要在 GitHub 仓库里打开分支保护：
+
+1. 进入仓库 `Settings`
+2. 打开 `Branches`
+3. 给 `main` 新建或编辑保护规则
+4. 勾选 `Require a pull request before merging`
+5. 勾选 `Require status checks to pass before merging`
+6. 把 `template-tests` 加进必需检查
+
+这样之后你的流程就是：
+
+1. 从 `main` 拉新分支
+2. 在分支上修改
+3. 提交 Pull Request
+4. GitHub 自动跑 `template-tests`
+5. 只有测试通过，PR 才允许合并
+
+如果你平时口头上习惯叫 MR，也可以把这里理解成同一件事；这个仓库实际平台是 GitHub，所以对应名称是 PR。
+
 ## 测试产物
 
 测试中间产物与结果位于：
