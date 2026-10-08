@@ -28,6 +28,16 @@ except ImportError:
     PYGMENTS_OK = False
 
 
+def check_dependencies():
+    """Check if optional dependencies are available."""
+    missing = []
+    if fitz is None:
+        missing.append("pymupdf (PDF export will be disabled)")
+    if not PYGMENTS_OK:
+        missing.append("pygments (code highlighting will use built-in highlighter)")
+    return missing
+
+
 ROOT = Path(__file__).resolve().parents[2]
 BOOK_DIR = ROOT / "正文"
 DEFAULT_OUTPUT_DIR = ROOT / "dist" / "book"
@@ -834,8 +844,8 @@ def build_html(chapters, title, toc_depth, page_map=None, cover_image="", versio
             front_index += 1
             front_sections.append(
                 f'<section class="front-matter" id="{anchor}">'
-                f'{"<div class=\"front-matter-title\">前言</div>" if front_index == 1 else ""}'
-                f'<div class="chapter-body">{render_markdown_html(chapter)}</div>'
+                + ('<div class="front-matter-title">前言</div>' if front_index == 1 else '')
+                + f'<div class="chapter-body">{render_markdown_html(chapter)}</div>'
                 '</section>'
             )
         else:
@@ -1533,6 +1543,12 @@ def main():
     args = parse_args()
     output_dir = Path(args.output_dir).resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
+
+    # Check optional dependencies and warn if missing
+    missing_deps = check_dependencies()
+    if missing_deps:
+        for dep in missing_deps:
+            print(f"[book-builder] warning: {dep}", file=sys.stderr)
 
     chapters = discover_chapters()
     collect_headings(chapters)
