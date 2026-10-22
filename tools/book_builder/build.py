@@ -725,6 +725,13 @@ def render_markdown_html(chapter):
                 s = lines[i].strip()
                 mm = re.match(r"^\d+[.)]\s+(.*)$", s)
                 if not mm:
+                    if not s:
+                        j = i + 1
+                        while j < len(lines) and not lines[j].strip():
+                            j += 1
+                        if j < len(lines) and re.match(r"^\d+[.)]\s+", lines[j].strip()):
+                            i += 1
+                            continue
                     break
                 items.append(f'<li>{render_inline(mm.group(1))}</li>')
                 i += 1
@@ -737,7 +744,19 @@ def render_markdown_html(chapter):
             while i < len(lines) and lines[i].strip().startswith(">"):
                 q.append(lines[i].strip()[1:].lstrip())
                 i += 1
-            blocks.append(f'<blockquote>{render_inline(" ".join(q))}</blockquote>')
+            paras = []
+            cur = []
+            for line in q:
+                if line:
+                    cur.append(line)
+                else:
+                    if cur:
+                        paras.append(" ".join(cur))
+                        cur = []
+            if cur:
+                paras.append(" ".join(cur))
+            bq_html = "".join(f"<p>{render_inline(p)}</p>" for p in paras)
+            blocks.append(f'<blockquote>{bq_html}</blockquote>')
             continue
 
         # Paragraph.
@@ -1109,6 +1128,8 @@ a {{ color: inherit; text-decoration: none; }}
 ul, ol {{ margin: 2.5mm 0 3mm; padding-left: 7mm; }}
 li {{ margin: 1mm 0; }}
 blockquote {{ margin: 3mm 0; padding-left: 3mm; border-left: 1.5px solid #d5d5d5; color: #555; }}
+blockquote p {{ margin: 0 0 1.5mm 0; }}
+blockquote p:last-child {{ margin-bottom: 0; }}
 .math-block {{ margin: 4mm 0; text-align: center; overflow-x: auto; }}
 .inline-image, img:not(.cover-logo) {{ display: block; max-width: 100%; height: auto; margin: 3mm auto; }}
 hr {{ border: 0; border-top: 1px solid #ddd; margin: 5mm 0; }}
