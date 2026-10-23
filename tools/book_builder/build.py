@@ -534,7 +534,10 @@ def split_table_row(line):
             buf.append(ch)
             escaped = False
         elif ch == "\\":
-            escaped = True
+            if i + 1 < len(s) and s[i + 1] == "|":
+                escaped = True
+            else:
+                buf.append(ch)
         elif ch == "`":
             in_code = not in_code
             buf.append(ch)
