@@ -47,6 +47,8 @@ struct Zmod {
 };
 using Z = Zmod<1000000007>;
 
+inline int mygcd(int a, int b) { return b ? mygcd(b, a % b) : a; }
+
 """
 
 
@@ -741,6 +743,12 @@ def main():
     tests = select_tests(args)
     cleanup_generated()
 
+    # Check if g++ is available
+    code, _, err = run_cmd(["g++", "--version"])
+    if code != 0:
+        print(f"Error: g++ not found or not working. Please install g++.\n{err}", file=sys.stderr)
+        return 1
+
     if args.list:
         print(json.dumps([t["name"] for t in tests], ensure_ascii=False, indent=2))
         return 0
@@ -775,6 +783,9 @@ def main():
             item["run_ok"] = code == 0
             if code != 0:
                 item["run_error"] = err or out
+            results.append(item)
+        except OSError as e:
+            item = {"name": test["name"], "compile_ok": False, "run_ok": False, "error": str(e)}
             results.append(item)
         finally:
             if cpp_path.exists():
