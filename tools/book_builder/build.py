@@ -357,7 +357,7 @@ def render_inline(text):
         elif token.startswith("\\") and len(token) == 2:
             result.append(html.escape(token[1]))
         elif token.startswith("$") or token.startswith(r"\("):
-            result.append(token)
+            result.append(html.escape(token))
         elif match.group(2) is not None:
             alt, src = match.group(2), match.group(3)
             result.append(
@@ -534,7 +534,10 @@ def split_table_row(line):
             buf.append(ch)
             escaped = False
         elif ch == "\\":
-            escaped = True
+            if i + 1 < len(s) and s[i + 1] == "|":
+                escaped = True
+            else:
+                buf.append(ch)
         elif ch == "`":
             in_code = not in_code
             buf.append(ch)
