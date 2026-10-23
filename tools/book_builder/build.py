@@ -731,9 +731,10 @@ def render_markdown_html(chapter):
 
         if re.match(r"^\d+[.)]\s+", stripped):
             items = []
+            start_num = None
             while i < len(lines):
                 s = lines[i].strip()
-                mm = re.match(r"^\d+[.)]\s+(.*)$", s)
+                mm = re.match(r"^(\d+)[.)]\s+(.*)$", s)
                 if not mm:
                     if not s:
                         j = i + 1
@@ -743,9 +744,12 @@ def render_markdown_html(chapter):
                             i += 1
                             continue
                     break
-                items.append(f'<li>{render_inline(mm.group(1))}</li>')
+                if start_num is None:
+                    start_num = int(mm.group(1))
+                items.append(f'<li>{render_inline(mm.group(2))}</li>')
                 i += 1
-            blocks.append("<ol>\n" + "\n".join(items) + "\n</ol>")
+            ol_attr = "" if start_num in (None, 1) else f' start="{start_num}"'
+            blocks.append(f"<ol{ol_attr}>\n" + "\n".join(items) + "\n</ol>")
             continue
 
         # Blockquote.
