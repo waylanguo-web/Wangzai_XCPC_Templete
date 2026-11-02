@@ -1,4 +1,5 @@
 import argparse
+import base64
 import html
 import os
 import re
@@ -849,7 +850,10 @@ def build_html(chapters, title, toc_depth, page_map=None, cover_image="", versio
     if cover_image:
         p = Path(cover_image).resolve()
         if p.exists():
-            cover_img_html = f'<img class="cover-logo" src="{p.as_uri()}" alt="">'
+            suffix = p.suffix.lower()
+            mime = "image/png" if suffix == ".png" else "image/jpeg"
+            b64 = base64.b64encode(p.read_bytes()).decode()
+            cover_img_html = f'<img class="cover-logo" src="data:{mime};base64,{b64}" alt="">'
 
     numbered = [c for c in chapters if not is_front_matter(c)]
     chapter_number = {id(c): i for i, c in enumerate(numbered, start=1)}
