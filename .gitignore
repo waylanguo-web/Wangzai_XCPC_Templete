@@ -1,3 +1,4 @@
 tools/template_tests/.generated/*
 !tools/template_tests/.generated/results.json
 dist/
+tools/template_tests/__pycache__/
