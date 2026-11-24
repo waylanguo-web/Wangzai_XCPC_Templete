@@ -63,7 +63,7 @@ unique(a + start, a + end);
 a.erase(unique(ALL(a)), a.end());
 ```
 
-#### bit 库与位运算函数 \__builtin\_
+#### 位运算函数 \__builtin\_
 
 ```c++
 __builtin_popcount(x) // 返回x二进制下含1的数量，例如x=15=(1111)时答案为4
@@ -72,7 +72,7 @@ __builtin_ffs(x) // 返回x右数第一个1的位置(1-idx)，1(1) 返回 1，8(
 
 __builtin_ctz(x) // 返回x二进制下后导0的个数，1(1) 返回 0，8(1000) 返回 3
 
-bit_width(x) // 返回x二进制下的位数，9(1001) 返回 4，26(11010) 返回 5
+x ? 64 - __builtin_clzll(x) : 0 // 无符号整数的二进制位数
 ```
 
 注：以上函数的 $\tt{}long\ long$ 版本只需要在函数后面加上 `ll` 即可（例如 `__builtin_popcountll(x)` )， $\tt{}unsigned\ long\ long$ 加上 `ull` 。
@@ -199,7 +199,7 @@ vector<int>::reverse_iterator it; //创建一个反向迭代器，++ 操作时�
 
 `log2(x)` ：返回 $\log_2(x)$
 
-`gcd(x, y) / lcm(x, y)` ：以 $\log$ 的复杂度返回 $\gcd(|x|, |y|)$ 与 ${\tt lcm}(|x|, |y|)$ ，且返回值符号也为正数。
+`__gcd(abs(x), abs(y))` 求非负最大公约数。求最小公倍数时，任一参数为 0 则返回 0，否则计算 `abs(x / __gcd(x, y) * y)`，要求结果可表示。
 
 ### 容器与成员函数
 
@@ -231,9 +231,9 @@ assign(n, 0) // 重设容器大小为n，且替换容器内的内容为0
 vector<int> ver[n + 1]; // 不好的声明方式
 vector<vector<int>> ver(n + 1);
 
-// 嵌套时只需要在最后一个注明变量类型
-vector dis(n + 1, vector<int>(m + 1));
-vector dis(m + 1, vector(n + 1, vector<int>(n + 1)));
+// C++14 下为每层 vector 写出元素类型
+vector<vector<int>> dis(n + 1, vector<int>(m + 1));
+vector<vector<vector<int>>> dis(m + 1, vector<vector<int>>(n + 1, vector<int>(n + 1)));
 ```
 
 #### 栈  stack

@@ -5,60 +5,33 @@ import subprocess
 import sys
 from pathlib import Path
 
+from regressions import REGRESSIONS
+
 
 ROOT = Path(__file__).resolve().parents[2]
 BOOK = ROOT / "正文"
 TMP = ROOT / "tools" / "template_tests" / ".generated"
 TMP.mkdir(exist_ok=True)
 
-FILES = {
-    "03A": (BOOK / "03A - 图论.md").read_text(encoding="utf-8"),
-    "03B": (BOOK / "03B - 图论常见结论及例题.md").read_text(encoding="utf-8"),
-}
-
 SUPPORTED_PATHS = {
-    "03A": BOOK / "03A - 图论.md",
-    "03B": BOOK / "03B - 图论常见结论及例题.md",
+    key: next(BOOK.glob(f"{key} -*.md"))
+    for key in ("01", "02", "03A", "03B", "04", "05A", "05B", "06A", "07", "08")
 }
+FILES = {key: path.read_text(encoding="utf-8") for key, path in SUPPORTED_PATHS.items()}
+BLOCK_PATTERN = re.compile(r"^```c(?:\+\+|pp)\n(.*?)\n```", re.M | re.S)
 
 
-COMMON = r"""
-#include <bits/stdc++.h>
-using namespace std;
-#define int long long
-
-template<int MOD>
-struct Zmod {
-    int x;
-    Zmod(int v = 0) {
-        x = (v % MOD + MOD) % MOD;
-    }
-    int val() const {
-        return x;
-    }
-    Zmod& operator+=(const Zmod& other) {
-        x += other.x;
-        if (x >= MOD) x -= MOD;
-        return *this;
-    }
-    friend Zmod operator+(Zmod a, const Zmod& b) {
-        return a += b;
-    }
-};
-using Z = Zmod<1000000007>;
-
-inline int mygcd(int a, int b) { return b ? mygcd(b, a % b) : a; }
-
-"""
-
-
-def extract_block(marker: str) -> str:
-    for text in FILES.values():
-        for m in re.finditer(r"```c\+\+\n(.*?)\n```", text, re.S):
-            block = m.group(1)
-            if marker in block:
-                return block
-    raise RuntimeError(f"cannot find block containing: {marker}")
+def find_block(marker, chapter=None):
+    matches = [
+        (key, match[1])
+        for key, page in FILES.items()
+        if chapter is None or key == chapter
+        for match in BLOCK_PATTERN.finditer(page)
+        if marker in match[1]
+    ]
+    if len(matches) != 1:
+        raise ValueError(f"expected one code block for {marker!r}, found {len(matches)}")
+    return matches[0]
 
 
 TESTS = [
@@ -140,10 +113,12 @@ signed main() {
     },
     {
         "name": "dsu",
-        "snippets": ["struct DSU {"],
+        "snippets": ["struct Kruskal {", "vector<int> fa, p, e, f;"],
         "main": r"""
 signed main() {
     DSU d(3);
+    Kruskal::DSU nested(3);
+    assert(nested.merge(1, 2));
     assert(!d.same(1, 2));
     d.merge(1, 2);
     assert(d.same(1, 2));
@@ -174,7 +149,11 @@ signed main() {
     G.add(1, 2); G.add(2, 1);
     G.add(2, 3);
     G.add(3, 4); G.add(4, 3);
-    auto [cnt, adj, col, siz] = G.work();
+    auto cntData = G.work();
+    auto cnt = get<0>(cntData);
+    auto adj = get<1>(cntData);
+    auto col = get<2>(cntData);
+    auto siz = get<3>(cntData);
     assert(cnt == 2);
     assert(col[1] == col[2]);
     assert(col[3] == col[4]);
@@ -191,7 +170,11 @@ signed main() {
     EDCC G(3);
     G.add(1, 2);
     G.add(2, 3);
-    auto [cnt, adj, col, siz] = G.work();
+    auto cntData = G.work();
+    auto cnt = get<0>(cntData);
+    auto adj = get<1>(cntData);
+    auto col = get<2>(cntData);
+    auto siz = get<3>(cntData);
     assert(cnt == 3);
     assert(col[1] != col[2] && col[2] != col[3]);
     assert(!G.bridge.empty());
@@ -209,7 +192,9 @@ signed main() {
     G.add(2, 3);
     G.work();
     assert(G.point[2]);
-    auto [tot, adj] = G.rebuild();
+    auto totData = G.rebuild();
+    auto tot = get<0>(totData);
+    auto adj = get<1>(totData);
     assert(tot == 3);
     assert(G.pointId[2] != 0);
     return 0;
@@ -243,7 +228,9 @@ signed main() {
     assert(G.siz[1] == 3);
     G.bfs(1);
     assert(G.bfsDep[2] == 2);
-    auto [ok, ord] = G.topsort();
+    auto okData = G.topsort();
+    auto ok = get<0>(okData);
+    auto ord = get<1>(okData);
     assert(ok);
     return 0;
 }
@@ -258,7 +245,9 @@ signed main() {
     G.add(0, 1);
     G.add(1, 2);
     G.add(0, 2);
-    auto [cnt, match] = G.work();
+    auto cntData = G.work();
+    auto cnt = get<0>(cntData);
+    auto match = get<1>(cntData);
     assert(cnt == 1);
     return 0;
 }
@@ -321,7 +310,9 @@ signed main() {
     G.add(2, 1, 2);
     G.add(2, 2, 4);
     assert(G.work() == 7);
-    auto [left, right] = G.answer(2, 2);
+    auto leftData = G.answer(2, 2);
+    auto left = get<0>(leftData);
+    auto right = get<1>(leftData);
     assert(left[1] == 1 && left[2] == 2);
     return 0;
 }
@@ -467,7 +458,7 @@ signed main() {
     },
     {
         "name": "shortest_path_counter",
-        "snippets": ["struct ShortestPathCounter {"],
+        "snippets": ["template<class T> constexpr T mypow(T n, int k)", "struct ShortestPathCounter {"],
         "main": r"""
 signed main() {
     ShortestPathCounter G(4);
@@ -506,33 +497,35 @@ signed main() {
     G.add(1, 2, 1);
     G.add(2, 3, 1);
     G.add(3, 1, 1);
-    auto [len, cnt] = G.work();
+    auto lenData = G.work();
+    auto len = get<0>(lenData);
+    auto cnt = get<1>(lenData);
     assert(len == 3);
     assert(cnt == 1);
+    DirectedMinCycleCounter parallel(2, 1'000'000'007);
+    for (int i = 0; i < 2; ++i) parallel.add(1, 2, 1);
+    for (int i = 0; i < 3; ++i) parallel.add(2, 1, 1);
+    assert((parallel.work() == pair<int, int>{2, 6}));
+    assert((parallel.work() == pair<int, int>{2, 6}));
+    parallel.add(1, 1, 1);
+    assert((parallel.work() == pair<int, int>{1, 1}));
     return 0;
 }
 """,
     },
     {
         "name": "floyd_function",
-        "snippets": ["int floyd(int n) {"],
-        "pre": r"""
-vector<vector<int>> val, dis;
-""",
+        "snippets": ["int floyd(vector<vector<int>> dis, int inf)"],
         "main": r"""
 signed main() {
-    int n = 3;
-    val.assign(n + 1, vector<int>(n + 1, (int)4e18));
-    dis.assign(n + 1, vector<int>(n + 1, (int)4e18));
-    for (int i = 1; i <= n; ++i) val[i][i] = dis[i][i] = 0;
-    auto add = [&](int x, int y, int w) {
-        val[x][y] = val[y][x] = dis[x][y] = dis[y][x] = min(dis[x][y], w);
-    };
-    add(1, 2, 1);
-    add(2, 3, 1);
-    add(1, 3, 1);
-    assert(floyd(n) == 3);
-    return 0;
+    constexpr int inf = 4'000'000'000'000'000'000LL;
+    vector<vector<int>> dis(4, vector<int>(4, inf));
+    for (int i = 1; i <= 3; ++i) dis[i][i] = 0;
+    assert(floyd(dis, inf) == inf);
+    dis[1][2] = dis[2][1] = 2'000'000'000LL;
+    dis[1][3] = dis[3][1] = 2'000'000'000LL;
+    dis[2][3] = dis[3][2] = 2'000'000'000LL;
+    assert(floyd(dis, inf) == 6'000'000'000LL);
 }
 """,
     },
@@ -580,11 +573,11 @@ signed main() {
 """,
     },
     {
-        "name": "directed_cycle_counter",
-        "snippets": ["struct DirectedCycleCounter {"],
+        "name": "directed_back_edge_counter",
+        "snippets": ["struct DirectedBackEdgeCounter {"],
         "main": r"""
 signed main() {
-    DirectedCycleCounter G(2);
+    DirectedBackEdgeCounter G(2);
     G.add(1, 2);
     G.add(2, 1);
     assert(G.work() == 1);
@@ -601,7 +594,9 @@ signed main() {
     G.add(1, 2);
     G.add(2, 3);
     G.add(3, 1);
-    auto [V, E] = G.work();
+    auto VData = G.work();
+    auto V = get<0>(VData);
+    auto E = get<1>(VData);
     assert(V.size() == 3);
     assert(E.size() == 3);
     return 0;
@@ -617,7 +612,9 @@ signed main() {
     G.add(1, 2);
     G.add(2, 3);
     G.add(3, 1);
-    auto [V, E] = G.work();
+    auto VData = G.work();
+    auto V = get<0>(VData);
+    auto E = get<1>(VData);
     assert(V.size() == 3);
     assert(E.size() == 3);
     return 0;
@@ -632,7 +629,9 @@ signed main() {
     PlanarChordChecker G(4);
     G.add(1, 3);
     G.add(2, 4);
-    auto [ok, ans] = G.work();
+    auto okData = G.work();
+    auto ok = get<0>(okData);
+    auto ans = get<1>(okData);
     assert(ok);
     assert(ans.size() == 2);
     return 0;
@@ -642,22 +641,28 @@ signed main() {
 ]
 
 
+TESTS.extend(REGRESSIONS)
+
+
 def parse_args():
     parser = argparse.ArgumentParser(description="Compile and run template tests.")
     parser.add_argument("--all", action="store_true", help="run all supported tests")
     parser.add_argument("--changed", action="store_true", help="run tests related to changed supported files")
     parser.add_argument("--files", nargs="*", default=[], help="run tests for specific files")
     parser.add_argument("--list", action="store_true", help="list matched tests and exit")
+    parser.add_argument("--optimization", choices=("0", "2"), default="2")
     return parser.parse_args()
 
 
-def run_cmd(cmd, cwd=ROOT):
-    proc = subprocess.run(cmd, capture_output=True, text=True, cwd=cwd)
+def run_cmd(cmd, cwd=ROOT, **kwargs):
+    proc = subprocess.run(
+        cmd, capture_output=True, encoding="utf-8", errors="replace", cwd=cwd, **kwargs
+    )
     return proc.returncode, proc.stdout, proc.stderr
 
 
 def git_file_list(args):
-    code, out, _ = run_cmd(args)
+    code, out, _ = run_cmd([args[0], "-c", "core.quotepath=false", *args[1:]])
     if code != 0:
         return []
     return [line.strip() for line in out.splitlines() if line.strip()]
@@ -670,6 +675,9 @@ def get_changed_supported_keys():
     code, _, _ = run_cmd(["git", "rev-parse", "--verify", "@{upstream}"])
     if code == 0:
         files.update(git_file_list(["git", "diff", "--name-only", "@{upstream}...HEAD"]))
+
+    if any(name.startswith("tools/template_tests/") or name == ".github/workflows/template-tests.yml" for name in files):
+        return set(SUPPORTED_PATHS)
 
     matched = set()
     for raw in files:
@@ -695,11 +703,9 @@ def normalize_input_files(paths):
 
 
 def test_groups(test):
-    groups = set()
-    for marker in test["snippets"]:
-        for key, text in FILES.items():
-            if marker in text:
-                groups.add(key)
+    groups = {find_block(marker)[0] for marker in test["snippets"]}
+    if not test.get("standalone"):
+        groups.add("01")
     return groups
 
 
@@ -720,13 +726,18 @@ def select_tests(args):
 
 
 def build_source(test):
-    parts = [COMMON]
+    parts = []
+    if not test.get("standalone"):
+        _, base = find_block("void solve(){", "01")
+        parts.append(base.split("void solve(){", 1)[0])
     if test.get("pre"):
         parts.append(test["pre"])
     for marker in test["snippets"]:
-        parts.append(extract_block(marker))
-        parts.append("\n")
-    parts.append(test["main"])
+        _, block = find_block(marker)
+        if marker in test.get("rename_main", ()):
+            block = block.replace("signed main(", "signed example_main(")
+        parts.append(block)
+    parts.append(test.get("main", ""))
     return "\n".join(parts)
 
 
@@ -741,7 +752,6 @@ def cleanup_generated():
 def main():
     args = parse_args()
     tests = select_tests(args)
-    cleanup_generated()
 
     # Check if g++ is available
     code, _, err = run_cmd(["g++", "--version"])
@@ -753,6 +763,7 @@ def main():
         print(json.dumps([t["name"] for t in tests], ensure_ascii=False, indent=2))
         return 0
 
+    cleanup_generated()
     if not tests:
         summary = {
             "total": 0,
@@ -772,19 +783,28 @@ def main():
         try:
             cpp_path.write_text(build_source(test), encoding="utf-8")
             code, out, err = run_cmd([
-                "g++", "-std=gnu++20", "-O2", str(cpp_path), "-o", str(exe_path)
+                "g++", "-std=gnu++14", "-Werror=c++17-extensions", "-Werror=c++20-extensions", f"-O{args.optimization}", *test.get("flags", ()),
+                str(cpp_path), "-o", str(exe_path)
             ])
             item = {"name": test["name"], "compile_ok": code == 0}
             if code != 0:
                 item["compile_error"] = err
                 results.append(item)
                 continue
-            code, out, err = run_cmd([str(exe_path)])
-            item["run_ok"] = code == 0
-            if code != 0:
+            try:
+                code, out, err = run_cmd([str(exe_path)], input=test.get("input", ""), timeout=10)
+            except subprocess.TimeoutExpired:
+                item.update(run_ok=False, run_error="execution exceeded 10 seconds")
+                results.append(item)
+                continue
+            expected = test.get("output")
+            item["run_ok"] = code == 0 and (expected is None or out.split() == expected.split())
+            if code == 0 and not item["run_ok"]:
+                err = f"expected {expected!r}, got {out!r}"
+            if not item["run_ok"]:
                 item["run_error"] = err or out
             results.append(item)
-        except OSError as e:
+        except (OSError, ValueError) as e:
             item = {"name": test["name"], "compile_ok": False, "run_ok": False, "error": str(e)}
             results.append(item)
         finally:

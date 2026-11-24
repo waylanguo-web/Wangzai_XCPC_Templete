@@ -9,8 +9,12 @@ on:
       - main
 
 jobs:
-  template-tests:
+  template-tests-matrix:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        optimization: [0, 2]
 
     steps:
       - name: Checkout repository
@@ -27,12 +31,23 @@ jobs:
           g++ --version
 
       - name: Run template tests
-        run: python tools/template_tests/run.py --all
+        run: python tools/template_tests/run.py --all --optimization ${{ matrix.optimization }}
 
       - name: Upload test summary
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: template-test-results
+          name: template-test-results-O${{ matrix.optimization }}
           path: tools/template_tests/.generated/results.json
           if-no-files-found: ignore
+
+  template-tests:
+    name: template-tests
+    needs: template-tests-matrix
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require both optimization levels to pass
+        env:
+          MATRIX_RESULT: ${{ needs.template-tests-matrix.result }}
+        run: test "$MATRIX_RESULT" = success
