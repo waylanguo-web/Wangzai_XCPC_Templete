@@ -134,10 +134,10 @@ signed main() {
     assert(read() == -12300);
 }
 """, input="214749 -1.23"),
-    case("graph_matching_reuse", ["struct HopcroftKarp {", "struct MaxCostMatch {"], r"""
+    case("graph_matching_reuse", ["struct HopcroftKarp", "struct MaxCostMatch {"], r"""
 signed main() {
     HopcroftKarp hk(1, 1);
-    hk.add(0, 0);
+    hk.add(1, 1);
     assert(hk.work() == 1 && hk.work() == 1);
     MaxCostMatch km(2);
     km.add(1, 1, 0);

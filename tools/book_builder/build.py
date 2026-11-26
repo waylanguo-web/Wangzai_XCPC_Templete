@@ -1153,6 +1153,7 @@ blockquote p {{ margin: 0 0 1.5mm 0; }}
 blockquote p:last-child {{ margin-bottom: 0; }}
 .math-block {{ margin: 4mm 0; text-align: center; overflow-x: auto; }}
 .inline-image, img:not(.cover-logo) {{ display: block; max-width: 100%; height: auto; margin: 3mm auto; }}
+.inline-image[src^="assets/graph-theory/"] {{ width: 74%; }}
 hr {{ border: 0; border-top: 1px solid #ddd; margin: 5mm 0; }}
 
 .page-break {{ break-before: page; height: 0; }}
@@ -1571,6 +1572,25 @@ def patch_toc_page_numbers(html_path, chapters, title, toc_depth, cover_image, v
 # Main
 # ------------------------------
 
+def copy_chapter_images(chapters, output_dir):
+    pattern = re.compile(r"^(!\[[^\]\n]*\]\()\.\./(assets/[^)\n]+)(\)[ \t]*)$", re.M)
+    asset_root = (ROOT / "assets").resolve()
+
+    def copy_image(match):
+        source = (ROOT / match[2]).resolve()
+        if not source.is_file() or not source.is_relative_to(asset_root):
+            return match[0]
+        relative = Path("assets") / source.relative_to(asset_root)
+        destination = output_dir / relative
+        if destination.resolve() != source:
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(source, destination)
+        return f"{match[1]}{relative.as_posix()}{match[3]}"
+
+    for chapter in chapters:
+        chapter.content = pattern.sub(copy_image, chapter.content)
+
+
 def main():
     args = parse_args()
     output_dir = Path(args.output_dir).resolve()
@@ -1583,6 +1603,7 @@ def main():
             print(f"[book-builder] warning: {dep}", file=sys.stderr)
 
     chapters = discover_chapters()
+    copy_chapter_images(chapters, output_dir)
     collect_headings(chapters)
 
     markdown_path = output_dir / f"{args.title}.md"
