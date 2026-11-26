@@ -63,21 +63,32 @@ signed main() {
     assert(G.getDis(3) == -3);
     assert(!G.cantReach(3));
     assert(!G.inNegLoop(3));
-    return 0;
-}
-""",
-    },
-    {
-        "name": "spfa",
-        "snippets": ["struct SPFA {"],
-        "main": r"""
-signed main() {
-    SPFA G(3);
-    G.add(1, 2, 2);
-    G.add(2, 3, -5);
-    G.add(1, 3, 10);
-    G.work(1);
-    assert(G.getDis(3) == -3);
+
+    BellmanFord H(7);
+    H.add(4, 5, 0);
+    H.add(3, 4, 0);
+    H.add(2, 3, 100);
+    H.add(1, 3, 0);
+    H.add(1, 2, 0);
+    H.add(2, 2, -1);
+    H.add(6, 6, -1);
+    H.add(6, 7, 0);
+    H.work(1);
+    assert(!H.inNegLoop(1) && !H.cantReach(1));
+    for (int i = 2; i <= 5; ++i) {
+        assert(H.inNegLoop(i) && !H.cantReach(i));
+    }
+    assert(H.cantReach(6) && !H.inNegLoop(6));
+    assert(H.cantReach(7) && !H.inNegLoop(7));
+
+    H.work(6);
+    assert(H.cantReach(2) && !H.inNegLoop(2));
+    assert(H.inNegLoop(6) && H.inNegLoop(7));
+
+    BellmanFord single(1);
+    single.add(1, 1, -1);
+    single.work();
+    assert(single.inNegLoop(1));
     return 0;
 }
 """,
@@ -167,17 +178,23 @@ signed main() {
         "snippets": ["struct EDCC {"],
         "main": r"""
 signed main() {
-    EDCC G(3);
+    EDCC G(5);
+    G.add(1, 2);
     G.add(1, 2);
     G.add(2, 3);
-    auto cntData = G.work();
-    auto cnt = get<0>(cntData);
-    auto adj = get<1>(cntData);
-    auto col = get<2>(cntData);
-    auto siz = get<3>(cntData);
-    assert(cnt == 3);
-    assert(col[1] != col[2] && col[2] != col[3]);
-    assert(!G.bridge.empty());
+    G.add(4, 4);
+    auto data = G.work();
+    const auto &adj = get<1>(data);
+    const auto &col = get<2>(data);
+    const auto &siz = get<3>(data);
+    assert(get<0>(data) == 4);
+    assert(col[1] == col[2] && col[2] != col[3]);
+    assert(siz[col[1]] == 2);
+    assert((adj[col[1]] == vector<int>{col[3]}));
+    assert((adj[col[3]] == vector<int>{col[1]}));
+    assert(adj[col[4]].empty() && adj[col[5]].empty());
+    assert((G.bridge == set<array<int, 2>>{{2, 3}}));
+    assert((G.direct == set<array<int, 2>>{{1, 2}, {2, 1}}));
     return 0;
 }
 """,
@@ -187,16 +204,25 @@ signed main() {
         "snippets": ["struct V_DCC {"],
         "main": r"""
 signed main() {
-    V_DCC G(3);
+    V_DCC G(5);
+    G.add(1, 2);
     G.add(1, 2);
     G.add(2, 3);
-    G.work();
-    assert(G.point[2]);
-    auto totData = G.rebuild();
-    auto tot = get<0>(totData);
-    auto adj = get<1>(totData);
-    assert(tot == 3);
-    assert(G.pointId[2] != 0);
+    G.add(2, 4);
+    G.add(5, 5);
+    auto data = G.rebuild();
+    const auto &adj = data.second;
+    assert(G.cnt == 4 && data.first == 9);
+    assert(G.point[2] && !G.point[1] && !G.point[5]);
+    assert(G.S.empty());
+    assert(adj[2].size() == 3 && adj[5].size() == 1);
+    for (int i = 1; i <= G.cnt; i++) {
+        assert(adj[5 + i] == G.col[i]);
+        for (int x : G.col[i]) {
+            assert(count(adj[x].begin(), adj[x].end(), 5 + i) == 1);
+        }
+    }
+    assert((adj[adj[5].front()] == vector<int>{5}));
     return 0;
 }
 """,
@@ -217,38 +243,46 @@ signed main() {
 """,
     },
     {
-        "name": "forward_star_graph",
-        "snippets": ["struct ForwardStarGraph {"],
+        "name": "topsort",
+        "snippets": ["vector<int> topsort("],
         "main": r"""
 signed main() {
-    ForwardStarGraph G(3, 3);
-    G.add(1, 2);
-    G.add(1, 3);
-    G.dfs(1);
-    assert(G.siz[1] == 3);
-    G.bfs(1);
-    assert(G.bfsDep[2] == 2);
-    auto okData = G.topsort();
-    auto ok = get<0>(okData);
-    auto ord = get<1>(okData);
-    assert(ok);
+    vector<vector<int>> adj(6);
+    adj[1] = {2, 2};
+    adj[2] = {3};
+    adj[4] = {3};
+    auto order = topsort(adj);
+    assert(order.size() == 5);
+    vector<int> pos(6);
+    for (int i = 0; i < 5; i++) pos[order[i]] = i;
+    for (int x = 1; x <= 5; x++) {
+        for (int y : adj[x]) assert(pos[x] < pos[y]);
+    }
+    adj[3] = {2};
+    assert((topsort(adj) == vector<int>{1, 4, 5}));
     return 0;
 }
 """,
     },
     {
         "name": "general_matching",
-        "snippets": ["struct GeneralMatching {"],
+        "snippets": ["struct MV {"],
         "main": r"""
 signed main() {
-    GeneralMatching G(3);
-    G.add(0, 1);
+    MV G(6);
     G.add(1, 2);
-    G.add(0, 2);
-    auto cntData = G.work();
-    auto cnt = get<0>(cntData);
-    auto match = get<1>(cntData);
-    assert(cnt == 1);
+    G.add(2, 3);
+    G.add(3, 1);
+    G.add(2, 4);
+    G.add(2, 4);
+    G.add(5, 5);
+    auto res = G.work();
+    assert(res.first == 2);
+    assert(res.second.size() == 7 && res.second[0] == 0);
+    assert(res.second[1] == 3 && res.second[3] == 1);
+    assert(res.second[2] == 4 && res.second[4] == 2);
+    assert(res.second[5] == 0 && res.second[6] == 0);
+    assert(G.work() == res);
     return 0;
 }
 """,
@@ -258,12 +292,22 @@ signed main() {
         "snippets": ["struct GeneralWeightedMatching {"],
         "main": r"""
 signed main() {
-    GeneralWeightedMatching G(2);
-    G.add(1, 2, 5);
-    assert(G.work() == 5);
-    auto ans = G.answer();
-    assert(ans.size() == 1);
-    assert(ans[0][0] == 1 && ans[0][1] == 2);
+    GeneralWeightedMatching G(7);
+    G.add(1, 2, 16);
+    G.add(2, 3, 9);
+    G.add(1, 3, 10);
+    G.add(2, 4, 9);
+    G.add(2, 4, 1);
+    G.add(5, 6, 500000000);
+    G.add(6, 7, 0);
+    G.add(5, 7, -1);
+    G.add(7, 7, 100);
+    assert(G.work() == 500000019);
+    assert((G.answer() == vector<array<int, 2>>{{1, 3}, {2, 4}, {5, 6}}));
+    assert(G.lk[1] == 3 && G.lk[3] == 1);
+    assert(G.lk[2] == 4 && G.lk[4] == 2);
+    assert(G.lk[5] == 6 && G.lk[6] == 5 && G.lk[7] == 0);
+    assert(G.work() == 500000019);
     return 0;
 }
 """,
@@ -286,15 +330,24 @@ signed main() {
     },
     {
         "name": "hopcroft_karp",
-        "snippets": ["struct HopcroftKarp {"],
+        "snippets": ["struct HopcroftKarp"],
         "main": r"""
 signed main() {
-    HopcroftKarp G(2, 2);
-    G.add(0, 0);
+    HopcroftKarp G(5, 6);
     G.add(1, 1);
-    assert(G.work() == 2);
-    auto ans = G.answer();
-    assert(ans.size() == 2);
+    G.add(1, 3);
+    G.add(2, 2);
+    G.add(2, 4);
+    G.add(3, 1);
+    G.add(3, 2);
+    G.add(4, 2);
+    G.add(4, 2);
+    const vector<array<int, 2>> expected{{1, 3}, {2, 4}, {3, 1}, {4, 2}};
+    assert(G.work() == 4 && G.answer() == expected);
+    assert(G.work() == 4 && G.answer() == expected);
+    assert(G.l[5] == 0 && G.r[5] == 0 && G.r[6] == 0);
+    G.add(5, 6);
+    assert(G.work() == 5 && G.l[5] == 6 && G.r[6] == 5);
     return 0;
 }
 """,
