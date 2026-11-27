@@ -387,7 +387,7 @@ signed main() {
     },
     {
         "name": "shortest_path_tree",
-        "snippets": ["struct ShortestPathTree {"],
+        "snippets": ["struct ShortestPathTree : Dijkstra"],
         "main": r"""
 signed main() {
     ShortestPathTree G(3);
@@ -420,7 +420,7 @@ signed main() {
     },
     {
         "name": "directed_euler",
-        "snippets": ["struct DirectedEulerGraph {"],
+        "snippets": ["struct DirectedEulerGraph : EulerGraph"],
         "main": r"""
 signed main() {
     DirectedEulerGraph G(3);
@@ -429,13 +429,21 @@ signed main() {
     assert(G.hasEulerPath());
     auto path = G.work();
     assert(path == vector<int>({1, 2, 3}));
+    DirectedEulerGraph H(4);
+    H.add(1, 1); H.add(1, 2); H.add(2, 1);
+    H.add(1, 2); H.add(2, 1);
+    assert(H.hasEulerPath());
+    assert(H.work(2) == vector<int>({2, 1, 1, 2, 1, 2}));
+    DirectedEulerGraph disconnected(3);
+    disconnected.add(1, 1); disconnected.add(3, 3);
+    assert(!disconnected.hasEulerPath());
     return 0;
 }
 """,
     },
     {
         "name": "undirected_euler",
-        "snippets": ["struct UndirectedEulerGraph {"],
+        "snippets": ["struct UndirectedEulerGraph : EulerGraph"],
         "main": r"""
 signed main() {
     UndirectedEulerGraph G(3);
@@ -443,7 +451,14 @@ signed main() {
     G.add(2, 3);
     assert(G.hasEulerPath());
     auto path = G.work();
-    assert(path.size() == 2);
+    assert(path == (vector<pair<int, int>>{{1, 2}, {2, 3}}));
+    UndirectedEulerGraph H(3);
+    H.add(2, 2); H.add(2, 3); H.add(2, 3);
+    assert(H.hasEulerPath());
+    assert(H.work() == (vector<pair<int, int>>{{2, 2}, {2, 3}, {3, 2}}));
+    UndirectedEulerGraph disconnected(4);
+    disconnected.add(1, 1); disconnected.add(3, 3);
+    assert(!disconnected.hasEulerPath());
     return 0;
 }
 """,
@@ -480,36 +495,6 @@ signed main() {
 """,
     },
     {
-        "name": "tree_pair_distance_sum",
-        "snippets": ["struct TreePairDistanceSum {"],
-        "main": r"""
-signed main() {
-    TreePairDistanceSum G(2);
-    G.add(1, 2);
-    G.add(2, 3);
-    G.add(3, 4);
-    assert(G.work() == 4);
-    return 0;
-}
-""",
-    },
-    {
-        "name": "tree_max_connected_block",
-        "snippets": ["struct TreeMaxConnectedBlock {"],
-        "main": r"""
-signed main() {
-    TreeMaxConnectedBlock G(3);
-    G.setPoint(1, 1);
-    G.setPoint(2, 2);
-    G.setPoint(3, 3);
-    G.add(1, 2, 4);
-    G.add(2, 3, 5);
-    assert(G.work() == 15);
-    return 0;
-}
-""",
-    },
-    {
         "name": "shortest_path_counter",
         "snippets": ["template<class T> constexpr T mypow(T n, int k)", "struct ShortestPathCounter {"],
         "main": r"""
@@ -521,47 +506,18 @@ signed main() {
     G.add(1, 4, 1); G.add(4, 1, 1);
     G.add(4, 3, 1); G.add(3, 4, 1);
     G.work(1);
-    assert(G.answer(3).val() == 3);
-    return 0;
-}
-""",
-    },
-    {
-        "name": "triangle_finder",
-        "snippets": ["struct TriangleFinder {"],
-        "main": r"""
-signed main() {
-    TriangleFinder G(3);
-    G.add(1, 2);
-    G.add(2, 3);
-    G.add(3, 1);
-    auto cyc = G.work();
-    assert(cyc.size() == 3);
-    return 0;
-}
-""",
-    },
-    {
-        "name": "directed_min_cycle_counter",
-        "snippets": ["struct DirectedMinCycleCounter {"],
-        "main": r"""
-signed main() {
-    DirectedMinCycleCounter G(3, 1000000007);
-    G.add(1, 2, 1);
-    G.add(2, 3, 1);
-    G.add(3, 1, 1);
-    auto lenData = G.work();
-    auto len = get<0>(lenData);
-    auto cnt = get<1>(lenData);
-    assert(len == 3);
-    assert(cnt == 1);
-    DirectedMinCycleCounter parallel(2, 1'000'000'007);
-    for (int i = 0; i < 2; ++i) parallel.add(1, 2, 1);
-    for (int i = 0; i < 3; ++i) parallel.add(2, 1, 1);
-    assert((parallel.work() == pair<int, int>{2, 6}));
-    assert((parallel.work() == pair<int, int>{2, 6}));
-    parallel.add(1, 1, 1);
-    assert((parallel.work() == pair<int, int>{1, 1}));
+    assert(G.dis[3][0] == 2 && G.num[3][0].val() == 3);
+    assert(G.dis[3][1] == 4);
+    ShortestPathCounter H(4);
+    H.add(1, 3, 5);
+    H.add(1, 2, 1);
+    H.add(2, 3, 1); H.add(2, 3, 1); H.add(2, 3, 4);
+    H.work(1);
+    assert(H.dis[3][0] == 2 && H.num[3][0].val() == 2);
+    assert(H.dis[3][1] == 5 && H.num[3][1].val() == 2);
+    assert(H.dis[4][0] == ShortestPathCounter::INF);
+    H.work(3);
+    assert(H.dis[1][1] == ShortestPathCounter::INF && H.num[1][1].val() == 0);
     return 0;
 }
 """,
@@ -584,14 +540,14 @@ signed main() {
     },
     {
         "name": "undirected_min_cycle",
-        "snippets": ["struct UndirectedMinCycle {"],
+        "snippets": ["int minCycleBfs("],
         "main": r"""
 signed main() {
-    UndirectedMinCycle G(3);
-    G.add(1, 2);
-    G.add(2, 3);
-    G.add(1, 3);
-    assert(G.work() == 3);
+    vector<vector<int>> g{{}, {2,3}, {1,3}, {1,2}, {}};
+    assert(minCycleBfs(g) == 3);
+    g[1] = {2};
+    g[3] = {2};
+    assert(minCycleBfs(g) == -1);
     return 0;
 }
 """,
@@ -611,83 +567,32 @@ signed main() {
 """,
     },
     {
-        "name": "simple_cycle_finder",
-        "snippets": ["struct SimpleCycleFinder {"],
+        "name": "cycle_finder",
+        "snippets": ["struct CycleFinder {"],
         "main": r"""
 signed main() {
-    SimpleCycleFinder G(3);
-    G.add(1, 2);
-    G.add(2, 3);
-    G.add(3, 1);
-    auto cyc = G.work();
-    assert(cyc.size() == 3);
-    return 0;
-}
-""",
-    },
-    {
-        "name": "directed_back_edge_counter",
-        "snippets": ["struct DirectedBackEdgeCounter {"],
-        "main": r"""
-signed main() {
-    DirectedBackEdgeCounter G(2);
-    G.add(1, 2);
-    G.add(2, 1);
-    assert(G.work() == 1);
-    return 0;
-}
-""",
-    },
-    {
-        "name": "directed_cycle_finder",
-        "snippets": ["struct DirectedCycleFinder {"],
-        "main": r"""
-signed main() {
-    DirectedCycleFinder G(3);
-    G.add(1, 2);
-    G.add(2, 3);
-    G.add(3, 1);
-    auto VData = G.work();
-    auto V = get<0>(VData);
-    auto E = get<1>(VData);
-    assert(V.size() == 3);
-    assert(E.size() == 3);
-    return 0;
-}
-""",
-    },
-    {
-        "name": "undirected_cycle_finder",
-        "snippets": ["struct UndirectedCycleFinder {"],
-        "main": r"""
-signed main() {
-    UndirectedCycleFinder G(3);
-    G.add(1, 2);
-    G.add(2, 3);
-    G.add(3, 1);
-    auto VData = G.work();
-    auto V = get<0>(VData);
-    auto E = get<1>(VData);
-    assert(V.size() == 3);
-    assert(E.size() == 3);
-    return 0;
-}
-""",
-    },
-    {
-        "name": "planar_chord_checker",
-        "snippets": ["struct TwoSat {", "struct PlanarChordChecker {"],
-        "main": r"""
-signed main() {
-    PlanarChordChecker G(4);
-    G.add(1, 3);
-    G.add(2, 4);
-    auto okData = G.work();
-    auto ok = get<0>(okData);
-    auto ans = get<1>(okData);
-    assert(ok);
-    assert(ans.size() == 2);
-    return 0;
+    auto check = [](int n, bool directed, vector<pair<int, int>> edges, int size) {
+        CycleFinder g(n, directed);
+        for (auto e : edges) g.add(e.first, e.second);
+        auto res = g.work();
+        assert((int)res.first.size() == size && (int)res.second.size() == size);
+        assert(set<int>(res.first.begin(), res.first.end()).size() == res.first.size());
+        assert(set<int>(res.second.begin(), res.second.end()).size() == res.second.size());
+        for (int i = 0; i < size; ++i) {
+            auto edge = edges.at(res.second[i] - 1);
+            pair<int, int> step{res.first[i], res.first[(i + 1) % size]};
+            assert(edge == step || (!directed && edge == make_pair(step.second, step.first)));
+        }
+        assert(g.work() == res);
+    };
+    check(4, true, {{2,3}, {3,4}, {4,2}}, 3);
+    check(4, true, {{1,2}, {1,3}, {3,4}, {4,2}}, 0);
+    check(3, true, {{2,3}, {3,2}}, 2);
+    check(3, false, {{2,3}}, 0);
+    check(3, false, {{2,3}, {3,2}}, 2);
+    check(4, false, {{2,3}, {3,4}, {4,2}}, 3);
+    check(3, false, {{2,2}}, 1);
+    check(3, true, {{2,2}}, 1);
 }
 """,
     },

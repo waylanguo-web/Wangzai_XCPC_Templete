@@ -1147,6 +1147,11 @@ a {{ color: inherit; text-decoration: none; }}
 .codehilite .na {{ color: #1c5a9c; }}
 
 ul, ol {{ margin: 2.5mm 0 3mm; padding-left: 7mm; }}
+ol {{ list-style-position: outside; }}
+ol > li::marker {{
+  font-family: "Times New Roman", "Nimbus Roman", "SimSun", serif;
+  font-variant-numeric: lining-nums tabular-nums;
+}}
 li {{ margin: 1mm 0; }}
 blockquote {{ margin: 3mm 0; padding-left: 3mm; border-left: 1.5px solid #d5d5d5; color: #555; }}
 blockquote p {{ margin: 0 0 1.5mm 0; }}
@@ -1154,6 +1159,9 @@ blockquote p:last-child {{ margin-bottom: 0; }}
 .math-block {{ margin: 4mm 0; text-align: center; overflow-x: auto; }}
 .inline-image, img:not(.cover-logo) {{ display: block; max-width: 100%; height: auto; margin: 3mm auto; }}
 .inline-image[src^="assets/graph-theory/"] {{ width: 74%; }}
+@media print {{
+  .inline-image[src^="assets/graph-theory/"] {{ width: 52%; margin-block: 1.8mm; }}
+}}
 hr {{ border: 0; border-top: 1px solid #ddd; margin: 5mm 0; }}
 
 .page-break {{ break-before: page; height: 0; }}
