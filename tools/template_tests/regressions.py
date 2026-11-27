@@ -62,6 +62,49 @@ signed main() {
     assert(get_siz(1, 2) == 3 && get_siz(2, 1) == 2);
 }
 """),
+    case("tree_reroot_subtree", ["struct TreeLifting{"], r"""
+signed main() {
+    TreeLifting tree(7);
+    for (auto e : {make_pair(1, 2), make_pair(1, 3), make_pair(2, 4),
+                   make_pair(2, 5), make_pair(5, 6), make_pair(3, 7)}) {
+        tree.add(e.first, e.second);
+    }
+    for (int root : {1, 6}) {
+        tree.work(root);
+        assert(tree.jump(root, 0) == root && tree.jump(root, 1) == 0);
+        assert(tree.jump(7, tree.dep[7] - 1) == root && tree.jump(7, 100) == 0);
+        assert(tree.dist(4, 7) == 4);
+        for (int r = 1; r <= tree.n; ++r) {
+            vector<int> expected(tree.n + 1);
+            auto dfs = [&](auto self, int u, int p) -> int {
+                expected[u] = 1;
+                for (int v : tree.ver[u])
+                    if (v != p) expected[u] += self(self, v, u);
+                return expected[u];
+            };
+            dfs(dfs, r, 0);
+            for (int u = 1; u <= tree.n; ++u)
+                assert(tree.get_root_siz(r, u) == expected[u]);
+        }
+    }
+}
+"""),
+    case("tree_weighted_lifting", ["struct WeightedLifting {"], r"""
+signed main() {
+    WeightedLifting tree(5);
+    tree.add(1, 2, 10);
+    tree.add(2, 3, 5);
+    tree.add(2, 4, 20);
+    tree.add(1, 5, 7);
+    tree.work(1);
+    assert(tree.lca(3, 4) == 2);
+    assert(tree.edge_dist(3, 5) == 3);
+    assert(tree.dist(3, 5) == 22);
+    assert(tree.max_edge(3, 5) == 10);
+    assert(tree.max_edge(4, 5) == 20);
+    assert(tree.max_edge(3, 3) == 0);
+}
+"""),
     case("polynomial", [
         "template<class T> constexpr T mypow(T n, int k)",
         "struct Poly : public",
@@ -149,7 +192,76 @@ signed main() {
     assert(left[1] == 1 && right[1] == 1);
 }
 """),
-    case("spt_zero_weights", ["struct ShortestPathTree {"], r"""
+    case("hopcroft_karp_against_hungarian", ["struct HopcroftKarp", "struct HungaryMatch {"], r"""
+signed main() {
+    mt19937 gen(17);
+    for (int round = 0; round < 240; ++round) {
+        int n = gen() % 10 + 1, m = gen() % 10 + 1;
+        HopcroftKarp faster(n, m);
+        HungaryMatch reference(n, m);
+        vector<vector<bool>> edge(n + 1, vector<bool>(m + 1));
+        for (int i = 0, cnt = gen() % (2 * n * m); i < cnt; ++i) {
+            int u = gen() % n + 1, v = gen() % m + 1;
+            edge[u][v] = true;
+            faster.add(u, v);
+            reference.add(u, v);
+        }
+        int size = faster.work();
+        assert(size == reference.work());
+        auto matching = faster.answer();
+        assert((int)matching.size() == size);
+        for (auto e : matching) {
+            int u = e[0], v = e[1];
+            assert(edge[u][v] && faster.l[u] == v && faster.r[v] == u);
+        }
+    }
+}
+"""),
+    case("strict_second_mst", ["struct Kruskal {", "int strictSecondMst("], r"""
+signed main() {
+    mt19937 gen(39);
+    for (int round = 0; round < 250; ++round) {
+        int n = gen() % 6 + 1, m = gen() % 12;
+        Kruskal graph(n);
+        vector<array<int, 3>> edges;
+        for (int i = 0; i < m; ++i) {
+            int u = gen() % n + 1, v = gen() % n + 1, w = (int)(gen() % 6) - 3;
+            graph.add(u, v, w);
+            edges.push_back({u, v, w});
+        }
+        set<int> sums;
+        for (int mask = 0; mask < (1LL << m); ++mask) {
+            if (__builtin_popcountll(mask) != n - 1) continue;
+            Kruskal::DSU parts(n);
+            int used = 0, sum = 0;
+            for (int i = 0; i < m; ++i) {
+                if (!(mask >> i & 1)) continue;
+                auto e = edges[i];
+                used += parts.merge(e[0], e[1]);
+                sum += e[2];
+            }
+            if (used == n - 1) sums.insert(sum);
+        }
+        int expected = sums.size() >= 2 ? *next(sums.begin()) : Kruskal::INF;
+        assert(strictSecondMst(graph) == expected);
+    }
+    Kruskal tied(3);
+    tied.add(1, 2, 1); tied.add(2, 3, 2); tied.add(1, 3, 2);
+    assert(strictSecondMst(tied) == 4);
+}
+"""),
+    case("matrix_tree_determinant", ["int detModPrime("], r"""
+signed main() {
+    assert(detModPrime({}, 2) == 1);
+    assert(detModPrime({{0, 1}, {1, 0}}, 7) == 6);
+    assert(detModPrime({{2, 4}, {3, 6}}, 7) == 0);
+    assert(detModPrime({{2, -1}, {-1, 2}}, 1'000'000'007) == 3);
+    assert(detModPrime({{5, -2}, {-2, 7}}, 1'000'000'007) == 31);
+    const int large = 2'305'843'009'213'693'951LL;
+    assert(detModPrime({{large - 2, 0}, {0, large - 3}}, large) == 6);
+}
+"""),
+    case("spt_zero_weights", ["struct ShortestPathTree : Dijkstra"], r"""
 signed main() {
     ShortestPathTree g(3);
     g.add(1, 2, 0, 0);
